@@ -93,10 +93,22 @@ def clean_unlocode_df(df):
     return df
 
 
+# %% [markdown]
+# __________________
+# # Extracting UN-LOCODE lookup table
+#
+# The website urls for UN-LOCODE tables remain the same apart from the country code at the end, e.g. "https://service.unece.org/trade/locode/gb.htm", we can create a table containing LOCODEs for all countries by looping through all 2 letter country codes.
+#
+# We need a list of 2 letter country codes for this first though
+
+# %%
+# If you have problems accessing the websites set verify_bool to False
+verify_bool = False
+
 # %%
 # grab a list of country codes
 url = "https://www.iban.com/country-codes"
-html = requests.get(url, verify=True).content
+html = requests.get(url, verify=verify_bool).content
 soup = BeautifulSoup(html, "html.parser")
 
 country_codes_df = extract_all_html_tables(soup)
@@ -112,13 +124,15 @@ country_codes = country_codes_df["alpha_2_code"]
 # now we have a list of country codes we can use them to create a lookup (this will take around 2.5 mins):
 
 # %%
-scrape_lookup = False
+scrape_lookup = True
 
 if scrape_lookup:
-    unlocode_lookup_df = extract_and_clean_unlocde_table(country_codes)
+    unlocode_lookup_df = extract_and_clean_unlocde_table(
+        country_codes, verify_url=verify_bool
+    )
 
 # %%
-save_lookup = False
+save_lookup = True
 
 if save_lookup:
 
