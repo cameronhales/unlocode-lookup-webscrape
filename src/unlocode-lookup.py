@@ -18,80 +18,14 @@
 # **Note** Might need to change 'verify' to False if encounter any problems (doing this is not on me).
 
 # %%
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+import pandas as pd
+
 
 from pathlib import Path
 
-
-# %%
-def extract_and_clean_unlocde_table(code_list, verify_url=True):
-    # initialise empty dataframe
-    lookup_df = pd.DataFrame()
-
-    for code in code_list:
-        try:
-            # get html data
-            url = f"https://service.unece.org/trade/locode/{code.lower()}.htm"
-            html = requests.get(url, verify=verify_url).content
-            soup = BeautifulSoup(html, "html.parser")
-
-            # create dataframe for country
-            df = extract_all_html_tables(soup)
-            df = clean_unlocode_df(df)
-
-            # append to main lookup
-            lookup_df = pd.concat([lookup_df, df])
-
-        except IndexError:
-            print(code)
-
-    return lookup_df
-
-
-def extract_all_html_tables(soup):
-    tables = soup.find_all("table")
-
-    df = pd.DataFrame()
-
-    for table in tables:
-        table_df = html_table_to_dataframe(table)
-        df = pd.concat([df, table_df], ignore_index=False)
-
-    return df
-
-
-def html_table_to_dataframe(table):
-
-    rows = table.find_all("tr")
-    data = []
-    for row in rows:
-        columns = row.find_all("td")
-        row_data = [col.get_text(strip=True) for col in columns]
-        data.append(row_data)
-
-    df = pd.DataFrame(data)
-
-    return df
-
-
-def clean_unlocode_df(df):
-
-    # the headers are on row 3
-    df.columns = df.iloc[3]
-
-    # only take rows after headers and first 6 columns
-    df = df.iloc[4:, [1, 2, 3, 4, 5, 6]]
-
-    # remove space in LOCODE
-    df["LOCODE"] = df["LOCODE"].apply(lambda x: "".join(x.split()))
-
-    # remove dashes and turn into a list of numbers
-    df["Function"] = df["Function"].apply(lambda x: list(x.replace("-", "")))
-
-    return df
-
+from support_functions import *
 
 # %% [markdown]
 # __________________
@@ -104,6 +38,9 @@ def clean_unlocode_df(df):
 # %%
 # If you have problems accessing the websites set verify_bool to False
 verify_bool = False
+
+# setting up outputs directory
+outputs_dir = Path.cwd().parent.joinpath("outputs")
 
 # %%
 # grab a list of country codes
@@ -124,23 +61,18 @@ country_codes = country_codes_df["alpha_2_code"]
 # now we have a list of country codes we can use them to create a lookup (this will take around 2.5 mins):
 
 # %%
-scrape_lookup = True
-
-if scrape_lookup:
+# get lookup_df
+try:
+    # load lookup first
+    unlocode_lookup_df = pd.read_csv(outputs_dir.joinpath("unlocode_lookup.csv"))
+except FileNotFoundError:
+    # create look up if none found
     unlocode_lookup_df = extract_and_clean_unlocde_table(
         country_codes, verify_url=verify_bool
     )
 
-# %%
-save_lookup = True
-
-if save_lookup:
-
-    # find outputs folder
-    output_dir = Path.cwd().parent.joinpath("outputs")
-
-    # save
-    unlocode_lookup_df.to_csv(output_dir.joinpath("unlocode_lookup.csv"), index=False)
+    # save to outputs
+    unlocode_lookup_df.to_csv(outputs_dir.joinpath("unlocode_lookup.csv"), index=False)
 
 # %% [markdown]
 # _______
